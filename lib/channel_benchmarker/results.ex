@@ -1,49 +1,17 @@
 defmodule ChannelBenchmarker.Results do
-  def output(results, state) do
-    results
-    |> group_results(state.channel_count)
-    |> output_result(state)
+  def output(formatter, results, state) do
+    grouped = group_results(results, state.channel_count)
+    formatter.output(results, grouped, state)
   end
 
-  defp output_result(results, state) do
-    bands = results.bands
-
-    IO.ANSI.Docs.print_heading("Results")
-
-    """
-    | Band (ms)     | Count                   |
-    | ------------: | :---------------------- |
-    | 0-0.5         | #{bands["0-0.5"]}       |
-    | 0.5-1         | #{bands["0.5-1"]}       |
-    | 1-2           | #{bands["1-2"]}         |
-    | 2-5           | #{bands["2-5"]}         |
-    | 5-10          | #{bands["5-10"]}        |
-    | 10-20         | #{bands["10-20"]}       |
-    | 20-50         | #{bands["20-50"]}       |
-    | 50-100        | #{bands["50-100"]}      |
-    | 100+          | #{bands["100+"]}        |
-
-
-                    Channels: #{results.channel_count}
-        Messages Per Channel: #{state.message_count}
-           Users Per Channel: #{state.users_per_channel}
-               Total Results: #{results.total_results}
-
-                 Min Latency: #{format_time(results.min_latency)}
-             Average Latency: #{format_time(results.average_latency)}
-             95th Percentile: #{format_time(results.percentile_95)}
-                 Max Latency: #{format_time(results.max_latency)}
-
-    """
-    |> IO.ANSI.Docs.print()
-
-  end
 
   defp group_results(results, channel_count) do
     results =
       results
-      |> Enum.flat_map(fn {_, results} ->
-        Enum.map(results, fn %{sent: sent, received: received} -> received - sent end)
+      |> Enum.flat_map(fn {_, result_group} ->
+        Enum.flat_map(result_group, fn {_, results} ->
+          Enum.map(results, fn %{sent: sent, received: received} -> received - sent end)
+        end)
       end)
       |> Enum.sort()
 
@@ -83,9 +51,5 @@ defmodule ChannelBenchmarker.Results do
     |> trunc()
 
     Enum.at(results, index - 1)
-  end
-
-  defp format_time(time) do
-    "#{Float.round(time / 1000, 2)}ms"
   end
 end

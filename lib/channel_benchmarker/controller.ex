@@ -24,8 +24,7 @@ defmodule ChannelBenchmarker.Controller do
   def handle_info(:connect_clients, state) do
     expected_size = length(state.pairs) * state.users_per_channel
 
-    pid_state = %{client_pids: [], sender_pids: [],
-                  expected_clients: expected_size, connected_clients: 0}
+    pid_state = %{client_pids: [], expected_clients: expected_size, connected_clients: 0}
 
     state.pairs
     |> Enum.map(fn pair ->
@@ -36,8 +35,9 @@ defmodule ChannelBenchmarker.Controller do
       Process.monitor(sender_pid)
 
       # 2 because the sender is already in the channel
-      for _i <- 2..state.users_per_channel do
-        {:ok, client_pid} = Client.start_link(Map.merge(opts, %{sender: sender_pid, mode: :client}))
+      for i <- 2..state.users_per_channel do
+        {:ok, client_pid} = Client.start_link(Map.merge(opts,
+              %{sender: sender_pid, mode: :client, user_id: (i - 1)}))
         Process.monitor(client_pid)
       end
     end)
@@ -60,7 +60,7 @@ defmodule ChannelBenchmarker.Controller do
       send(client_pid, :next)
     end)
 
-    {_, state} = Map.split(state, [:client_pids, :sender_pids])
+    {_, state} = Map.split(state, [:client_pids])
     {:noreply, state}
   end
 
@@ -75,17 +75,21 @@ defmodule ChannelBenchmarker.Controller do
     {:noreply, state}
   end
 
-  def handle_info({:result, id, time}, state) do
-    state = update_in(state.results, &Map.update(&1, id, [time], fn acc -> [time | acc] end))
+  def handle_info({:result, channel_id, user_id, time}, state) do
+    channel_id = "channel_#{channel_id}"
+    user_id = "user_#{user_id}"
+    state = %{state | results: Map.put_new(state.results, channel_id, %{})}
+    state = update_in(state.results[channel_id],
+      &Map.update(&1, user_id, [time], fn acc -> [time | acc] end))
     {:noreply, state}
   end
 
   def handle_info({:DOWN, _, _, _, _}, state) do
     state = %{state | disconnected_count: state.disconnected_count + 1}
     if state.disconnected_count >= (length(state.pairs) * state.users_per_channel) do
-      ChannelBenchmarker.Results.output(state.results, %{channel_count: length(state.pairs),
-                                                         message_count: state.message_count,
-                                                         users_per_channel: state.users_per_channel})
+      ChannelBenchmarker.Results.output(state.formatter, state.results,
+        %{channel_count: length(state.pairs), message_count: state.message_count,
+          users_per_channel: state.users_per_channel})
       {:stop, :normal, state}
     else
       {:noreply, state}
