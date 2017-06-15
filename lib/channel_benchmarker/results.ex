@@ -65,7 +65,7 @@ defmodule ChannelBenchmarker.Results do
 
     %{
       channel_count: channel_count,
-      total_messages: channel_count,
+      total_messages: total_messages,
       min_latency: min_latency ,
       max_latency: max_latency,
       average_latency: average_latency,

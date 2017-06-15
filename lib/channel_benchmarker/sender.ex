@@ -48,7 +48,10 @@ defmodule ChannelBenchmarker.Sender do
 
 
   def handle_reply(_topic, _ref, _payload, _transport, state) do
-    {:stop, :normal, state}
+    case state.message_count do
+      1 -> {:stop, :normal, state}
+      count -> {:ok, %{state | message_count: count - 1}}
+    end
   end
 
   def handle_info(:next, transport, state) do

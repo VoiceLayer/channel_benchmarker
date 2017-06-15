@@ -27,7 +27,7 @@ defmodule ChannelBenchmarker.Controller do
     state.pairs
     |> Enum.map(fn pair ->
       opts = %{port: state.port, host: state.host, channel_id: pair["channel_id"],
-               controller: self()}
+               message_count: state.message_count, controller: self()}
       {:ok, sender_pid} =
         Sender.start_link(Map.merge(opts, %{mode: :sender}))
 

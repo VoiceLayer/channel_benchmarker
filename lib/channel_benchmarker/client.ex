@@ -47,7 +47,12 @@ defmodule ChannelBenchmarker.Client do
   def handle_message(_topic, "new:msg", %{"sent_at" => sent_at}, _transport, state) do
     result = %{sent: sent_at, received: System.system_time(:microseconds)}
     send(state.controller, {:result, state.channel_id, result})
-    {:stop, :normal, state}
+    case state.message_count do
+      1 -> {:stop, :normal, state}
+      count ->
+        send(state.sender, :next)
+        {:ok, %{state | message_count: count - 1}}
+    end
   end
 
   def handle_reply(_topic, _ref, _payload, _transport, state) do
