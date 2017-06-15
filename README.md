@@ -1,19 +1,27 @@
 # ChannelBenchmarker
 
-**TODO: Add description**
+## NOTE This is a work in progress
 
-## Installation
+This utility can be used to benchmark Phoenix Channels
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `channel_benchmarker` to your list of dependencies in `mix.exs`:
+## Running
 
-```elixir
-def deps do
-  [{:channel_benchmarker, "~> 0.1.0"}]
-end
+This requires a compatible server. Currently this is
+https://github.com/Gazler/phoenix_chat_example/tree/feat/channel-bench
+
+You can run the server my doing:
+
+```shell
+git clone git@github.com:Gazler/phoenix_chat_example -b feat/channel-bench
+cd phoenix_chat_example
+mix deps.get
+MIX_ENV=prod mix compile
+PORT=4000 MIX_ENV=prod iex --erl "+A 100 +K true +P 1000000" -S mix phoenix.server
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/channel_benchmarker](https://hexdocs.pm/channel_benchmarker).
+The benchmarker can be run with the following command:
+
+    mix run bench.exs --channels 100 --messages 100 --users-per-channel 2 --format terminal
+
+Please ensure users-per-channel is at least 2.
 

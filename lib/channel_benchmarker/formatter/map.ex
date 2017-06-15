@@ -1,5 +1,5 @@
 defmodule ChannelBenchmarker.Formatter.Map do
-  def output(results, grouped, state) do
+  def output(results, _grouped, _state) do
     results
     |> Enum.reduce(%{}, fn ({id, result_set}, acc) ->
       Map.put(acc, id, Enum.reduce(result_set, %{}, fn ({pid, results}, acc2) ->

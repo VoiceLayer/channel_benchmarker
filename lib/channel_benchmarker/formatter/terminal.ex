@@ -1,5 +1,5 @@
 defmodule ChannelBenchmarker.Formatter.Terminal do
-  def output(results, grouped, state) do
+  def output(_results, grouped, state) do
     output_result(grouped, state)
   end
 

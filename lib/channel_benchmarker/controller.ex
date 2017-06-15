@@ -70,7 +70,7 @@ defmodule ChannelBenchmarker.Controller do
     {:noreply, state}
   end
 
-  def handle_info({:client_joined, :sender, pid}, state) do
+  def handle_info({:client_joined, :sender, _pid}, state) do
     state = %{state | connected_clients: state.connected_clients + 1}
     {:noreply, state}
   end
