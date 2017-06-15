@@ -22,30 +22,32 @@ defmodule ChannelBenchmarker.Controller do
   end
 
   def handle_info(:connect_clients, state) do
-    pid_state = %{client_pids: [], sender_pids: []}
+    expected_size = length(state.pairs) * state.users_per_channel
+
+    pid_state = %{client_pids: [], sender_pids: [],
+                  expected_clients: expected_size, connected_clients: 0}
 
     state.pairs
     |> Enum.map(fn pair ->
       opts = %{port: state.port, host: state.host, channel_id: pair["channel_id"],
                message_count: state.message_count, controller: self()}
-      {:ok, sender_pid} =
-        Sender.start_link(Map.merge(opts, %{mode: :sender}))
 
-      {:ok, client_pid} =
-      Client.start_link(Map.merge(opts, %{sender: sender_pid, mode: :client}))
+      {:ok, sender_pid} = Sender.start_link(Map.merge(opts, %{mode: :sender}))
       Process.monitor(sender_pid)
-      Process.monitor(client_pid)
-    end)
 
+      # 2 because the sender is already in the channel
+      for _i <- 2..state.users_per_channel do
+        {:ok, client_pid} = Client.start_link(Map.merge(opts, %{sender: sender_pid, mode: :client}))
+        Process.monitor(client_pid)
+      end
+    end)
 
     {:noreply, Map.merge(state, pid_state)}
   end
 
   def handle_info({:client_joined, mode, pid},
-  %{pairs: pairs, sender_pids: senders, client_pids: clients} = state)
-  when (length(senders) == length(pairs) and length(clients) == length(pairs) - 1)
-  or (length(senders) == length(pairs) -1 and length(clients) == length(pairs))
-  do
+  %{expected_clients: expected, connected_clients: connected} = state)
+  when (connected + 1) == expected do
     pids =
       if mode == :client do
         [pid | state.client_pids]
@@ -63,12 +65,13 @@ defmodule ChannelBenchmarker.Controller do
   end
 
   def handle_info({:client_joined, :client, pid}, state) do
-    state = %{state | client_pids: [pid | state.client_pids]}
+    state = %{state | client_pids: [pid | state.client_pids],
+                      connected_clients: state.connected_clients + 1}
     {:noreply, state}
   end
 
   def handle_info({:client_joined, :sender, pid}, state) do
-    state = %{state | sender_pids: [pid | state.sender_pids]}
+    state = %{state | connected_clients: state.connected_clients + 1}
     {:noreply, state}
   end
 
@@ -79,9 +82,10 @@ defmodule ChannelBenchmarker.Controller do
 
   def handle_info({:DOWN, _, _, _, _}, state) do
     state = %{state | disconnected_count: state.disconnected_count + 1}
-    if state.disconnected_count >= (length(state.pairs) * 2) do
-      ChannelBenchmarker.Results.output(state.results,
-        %{channel_count: length(state.pairs)})
+    if state.disconnected_count >= (length(state.pairs) * state.users_per_channel) do
+      ChannelBenchmarker.Results.output(state.results, %{channel_count: length(state.pairs),
+                                                         message_count: state.message_count,
+                                                         users_per_channel: state.users_per_channel})
       {:stop, :normal, state}
     else
       {:noreply, state}

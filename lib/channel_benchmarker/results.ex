@@ -2,10 +2,10 @@ defmodule ChannelBenchmarker.Results do
   def output(results, state) do
     results
     |> group_results(state.channel_count)
-    |> output_result()
+    |> output_result(state)
   end
 
-  defp output_result(results) do
+  defp output_result(results, state) do
     bands = results.bands
 
     IO.ANSI.Docs.print_heading("Results")
@@ -24,13 +24,15 @@ defmodule ChannelBenchmarker.Results do
     | 100+          | #{bands["100+"]}        |
 
 
-        Channels:         #{results.channel_count}
-        Total Messages:   #{results.total_messages}
+                    Channels: #{results.channel_count}
+        Messages Per Channel: #{state.message_count}
+           Users Per Channel: #{state.users_per_channel}
+               Total Results: #{results.total_results}
 
-        Min Latency:      #{format_time(results.min_latency)}
-        Average Latency:  #{format_time(results.average_latency)}
-        95th Percentile:  #{format_time(results.percentile_95)}
-        Max Latency:      #{format_time(results.max_latency)}
+                 Min Latency: #{format_time(results.min_latency)}
+             Average Latency: #{format_time(results.average_latency)}
+             95th Percentile: #{format_time(results.percentile_95)}
+                 Max Latency: #{format_time(results.max_latency)}
 
     """
     |> IO.ANSI.Docs.print()
@@ -45,8 +47,8 @@ defmodule ChannelBenchmarker.Results do
       end)
       |> Enum.sort()
 
-    total_messages = length(results)
-    average_latency = Enum.sum(results) / total_messages
+    total_results = length(results)
+    average_latency = Enum.sum(results) / total_results
     percentile_95 = calculate_percentile(results, 95)
     max_latency = Enum.max(results)
     min_latency = Enum.min(results)
@@ -65,7 +67,7 @@ defmodule ChannelBenchmarker.Results do
 
     %{
       channel_count: channel_count,
-      total_messages: total_messages,
+      total_results: total_results,
       min_latency: min_latency ,
       max_latency: max_latency,
       average_latency: average_latency,
